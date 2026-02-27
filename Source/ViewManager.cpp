@@ -39,6 +39,10 @@ namespace
 	// the following variable is false when orthographic projection
 	// is off and true when it is on
 	bool bOrthographicProjection = false;
+
+	float gCameraSpeedScale = 1.0f;
+	const float CAMERA_SPEED_MIN = 0.1f;
+	const float CAMERA_SPEED_MAX = 5.0f;
 }
 
 /***********************************************************
@@ -101,10 +105,13 @@ GLFWwindow* ViewManager::CreateDisplayWindow(const char* windowTitle)
 	glfwMakeContextCurrent(window);
 
 	// tell GLFW to capture all mouse events
-	//glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+	glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
 
 	// this callback is used to receive mouse moving events
 	glfwSetCursorPosCallback(window, &ViewManager::Mouse_Position_Callback);
+
+	// Recieve mouse scroll events
+	glfwSetScrollCallback(window, &ViewManager::Mouse_Scroll_Callback);
 
 	// enable blending for supporting tranparent rendering
 	glEnable(GL_BLEND);
@@ -123,6 +130,35 @@ GLFWwindow* ViewManager::CreateDisplayWindow(const char* windowTitle)
  ***********************************************************/
 void ViewManager::Mouse_Position_Callback(GLFWwindow* window, double xMousePos, double yMousePos)
 {
+	if (gFirstMouse)
+	{
+		gLastX = xMousePos;
+		gLastY = yMousePos;
+		gFirstMouse = false;
+	}
+
+	// calculate the X offset and Y offset values for moving the 3D camera accordingly
+	float xOffset = xMousePos - gLastX;
+	float yOffset = gLastY - yMousePos; // reversed since y-coordinates go from bottom to top
+
+	// set the current positions into the last position variables
+	gLastX = xMousePos;
+	gLastY = yMousePos;
+
+	// move the 3D camera according to the calculated offsets
+	g_pCamera->ProcessMouseMovement(xOffset, yOffset);
+}
+
+void ViewManager::Mouse_Scroll_Callback(GLFWwindow* window, double xoffset, double yoffset) {
+
+	gCameraSpeedScale += static_cast<float>(yoffset) * 0.05f;
+	//ensure camera speed stays within designated range
+	if (gCameraSpeedScale < CAMERA_SPEED_MIN) {
+		gCameraSpeedScale = CAMERA_SPEED_MIN;
+	}
+	if (gCameraSpeedScale > CAMERA_SPEED_MAX) {
+		gCameraSpeedScale = CAMERA_SPEED_MAX;
+	}
 }
 
 /***********************************************************
@@ -137,6 +173,62 @@ void ViewManager::ProcessKeyboardEvents()
 	if (glfwGetKey(m_pWindow, GLFW_KEY_ESCAPE) == GLFW_PRESS)
 	{
 		glfwSetWindowShouldClose(m_pWindow, true);
+	}
+	
+	float scaledDelta = gDeltaTime * gCameraSpeedScale; // Delta time scaled with the camera speed multiplier
+
+	// process camera zooming in and out
+	if (glfwGetKey(m_pWindow, GLFW_KEY_W) == GLFW_PRESS)
+	{
+		g_pCamera->ProcessKeyboard(FORWARD, scaledDelta);
+	}
+	if (glfwGetKey(m_pWindow, GLFW_KEY_S) == GLFW_PRESS)
+	{
+		g_pCamera->ProcessKeyboard(BACKWARD, scaledDelta);
+	}
+
+	// process camera panning left and right
+	if (glfwGetKey(m_pWindow, GLFW_KEY_A) == GLFW_PRESS)
+	{
+		g_pCamera->ProcessKeyboard(LEFT, scaledDelta);
+	}
+	if (glfwGetKey(m_pWindow, GLFW_KEY_D) == GLFW_PRESS)
+	{
+		g_pCamera->ProcessKeyboard(RIGHT, scaledDelta);
+	}
+
+	// process camera panning up and down
+	if (glfwGetKey(m_pWindow, GLFW_KEY_Q) == GLFW_PRESS)
+	{
+		g_pCamera->ProcessKeyboard(UP, scaledDelta);
+	}
+	if (glfwGetKey(m_pWindow, GLFW_KEY_E) == GLFW_PRESS)
+	{
+		g_pCamera->ProcessKeyboard(DOWN, scaledDelta);
+	}
+
+	// change between different projection views
+	if (glfwGetKey(m_pWindow, GLFW_KEY_O) == GLFW_PRESS)
+	{
+		// change to a multi-view orthographic projection
+		bOrthographicProjection = true;
+
+		// change the camera settings to show a front orthographic view
+		g_pCamera->Position = glm::vec3(0.0f, 4.0f, 10.0f);
+		g_pCamera->Up = glm::vec3(0.0f, 1.0f, 0.0f);
+		g_pCamera->Front = glm::vec3(0.0f, 0.0f, -1.0f);
+	}
+
+	if (glfwGetKey(m_pWindow, GLFW_KEY_P) == GLFW_PRESS)
+	{
+		// change to perspective projection
+		bOrthographicProjection = false;
+
+		// change the camera settings to show a perspective view
+		g_pCamera->Position = glm::vec3(0.0f, 5.5f, 8.0f);
+		g_pCamera->Front = glm::vec3(0.0f, -0.5f, -2.0f);
+		g_pCamera->Up = glm::vec3(0.0f, 1.0f, 0.0f);
+		g_pCamera->Zoom = 60;
 	}
 }
 
@@ -165,8 +257,30 @@ void ViewManager::PrepareSceneView()
 	view = g_pCamera->GetViewMatrix();
 
 	// define the current projection matrix
-	projection = glm::perspective(glm::radians(g_pCamera->Zoom), (GLfloat)WINDOW_WIDTH / (GLfloat)WINDOW_HEIGHT, 0.1f, 100.0f);
-
+	if (bOrthographicProjection == false)
+	{
+		// perspective projection
+		projection = glm::perspective(glm::radians(g_pCamera->Zoom), (GLfloat)WINDOW_WIDTH / (GLfloat)WINDOW_HEIGHT, 0.1f, 100.0f);
+	}
+	else
+	{
+		// front-view orthographic projection with correct aspect ratio
+		double scale = 0.0;
+		if (WINDOW_WIDTH > WINDOW_HEIGHT)
+		{
+			scale = (double)WINDOW_HEIGHT / (double)WINDOW_WIDTH;
+			projection = glm::ortho(-5.0f, 5.0f, -5.0f * (float)scale, 5.0f * (float)scale, 0.1f, 100.0f);
+		}
+		else if (WINDOW_WIDTH < WINDOW_HEIGHT)
+		{
+			scale = (double)WINDOW_WIDTH / (double)WINDOW_HEIGHT;
+			projection = glm::ortho(-5.0f * (float)scale, 5.0f * (float)scale, -5.0f, 5.0f, 0.1f, 100.0f);
+		}
+		else
+		{
+			projection = glm::ortho(-5.0f, 5.0f, -5.0f, 5.0f, 0.1f, 100.0f);
+		}
+	}
 	// if the shader manager object is valid
 	if (NULL != m_pShaderManager)
 	{

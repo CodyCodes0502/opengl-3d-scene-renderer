@@ -103,5 +103,12 @@ public:
 	// customize for their own 3D scene
 	void PrepareScene();
 	void RenderScene();
+	void RenderCatScratcher();
+	void RenderChair();
+	void RenderBall();
+	void RenderKettlebell();
+	void LoadSceneTextures();
+	void DefineObjectMaterials();
+	void SetupSceneLights();
 
 };

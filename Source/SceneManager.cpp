@@ -371,6 +371,75 @@ void SceneManager::SetShaderMaterial(
 /*** for assistance.                                        ***/
 /**************************************************************/
 
+//load the textures for the scene
+void SceneManager::LoadSceneTextures() {
+	bool bReturn = false;
+
+	bReturn = CreateGLTexture("../../Utilities/textures/carpet1.jpg", "carpet1");
+
+	bReturn = CreateGLTexture("../../Utilities/textures/carpet2.jpg", "carpet2");
+
+	bReturn = CreateGLTexture("../../Utilities/textures/abstract.jpg", "abstract");
+
+	BindGLTextures();
+}
+
+//Configures the material settings for the scene
+void SceneManager::DefineObjectMaterials() {
+	OBJECT_MATERIAL carpet1Material;
+	carpet1Material.ambientColor = glm::vec3(0.9f, 0.8f, 0.5f);
+	carpet1Material.ambientStrength = 0.5f;
+	carpet1Material.diffuseColor = glm::vec3(0.1f, 0.3f, 0.5f);
+	carpet1Material.specularColor = glm::vec3(0.5f, 0.5f, 0.5f);
+	carpet1Material.shininess = 25.0;
+	carpet1Material.tag = "carpet";
+
+	m_objectMaterials.push_back(carpet1Material);
+
+	OBJECT_MATERIAL marbleMaterial;
+	marbleMaterial.ambientColor = glm::vec3(0.75f, 0.75f, 0.75f);
+	marbleMaterial.ambientStrength = 0.5f;
+	marbleMaterial.diffuseColor = glm::vec3(0.1f, 0.3f, 0.5f);
+	marbleMaterial.specularColor = glm::vec3(0.5f, 0.5f, 0.5f);
+	marbleMaterial.shininess = 25.0;
+	marbleMaterial.tag = "abstract";
+
+	m_objectMaterials.push_back(marbleMaterial);
+
+}
+
+void SceneManager::SetupSceneLights() {
+
+	m_pShaderManager->setBoolValue(g_UseLightingName, true);
+
+	m_pShaderManager->setVec3Value("lightSources[0].position", 10.0f, 10.0f, 10.0f);
+	m_pShaderManager->setVec3Value("lightSources[0].ambientColor", 0.01f, 0.01f, 0.01f);
+	m_pShaderManager->setVec3Value("lightSources[0].diffuseColor", 0.4f, 0.4f, 0.4f);
+	m_pShaderManager->setVec3Value("lightSources[0].specularColor", 1.0f, 1.0f, 1.0f);
+	m_pShaderManager->setFloatValue("lightSources[0].focalStrength", 32.0f);
+	m_pShaderManager->setFloatValue("lightSources[0].specularIntensity", 0.05f);
+
+	m_pShaderManager->setVec3Value("lightSources[1].position", -10.0f, 10.0f, -10.0f);
+	m_pShaderManager->setVec3Value("lightSources[1].ambientColor", 0.01f, 0.01f, 0.01f);
+	m_pShaderManager->setVec3Value("lightSources[1].diffuseColor", 0.4f, 0.4f, 0.4f);
+	m_pShaderManager->setVec3Value("lightSources[1].specularColor", 1.0f, 1.0f, 1.0f);
+	m_pShaderManager->setFloatValue("lightSources[1].focalStrength", 32.0f);
+	m_pShaderManager->setFloatValue("lightSources[1].specularIntensity", 0.05f);
+
+	m_pShaderManager->setVec3Value("lightSources[2].position", 1.0f, 10.0f, 1.0f);
+	m_pShaderManager->setVec3Value("lightSources[2].ambientColor", 0.01f, 0.01f, 0.01f);
+	m_pShaderManager->setVec3Value("lightSources[2].diffuseColor", 0.3f, 0.3f, 0.3f);
+	m_pShaderManager->setVec3Value("lightSources[2].specularColor", 1.0f, 1.0f, 1.0f);
+	m_pShaderManager->setFloatValue("lightSources[2].focalStrength", 64.0f);
+	m_pShaderManager->setFloatValue("lightSources[2].specularIntensity", 0.05f);
+
+	m_pShaderManager->setVec3Value("lightSources[3].position", 10.0f, 0.0f, -10.0f);
+	m_pShaderManager->setVec3Value("lightSources[3].ambientColor", 0.1f, 0.1f, 0.1f);
+	m_pShaderManager->setVec3Value("lightSources[3].diffuseColor", 1.0f, 1.0f, 1.0f);
+	m_pShaderManager->setVec3Value("lightSources[3].specularColor", 1.0f, 1.0f, 1.0f);
+	m_pShaderManager->setFloatValue("lightSources[3].focalStrength", 16.0f);
+	m_pShaderManager->setFloatValue("lightSources[3].specularIntensity", 0.05f);
+}
 
 /***********************************************************
  *  PrepareScene()
@@ -385,7 +454,16 @@ void SceneManager::PrepareScene()
 	// loaded in memory no matter how many times it is drawn
 	// in the rendered 3D scene
 
+	LoadSceneTextures();
+	DefineObjectMaterials();
+	SetupSceneLights();
+
 	m_basicMeshes->LoadPlaneMesh();
+	m_basicMeshes->LoadBoxMesh();
+	m_basicMeshes->LoadPyramid4Mesh();
+	m_basicMeshes->LoadCylinderMesh();
+	m_basicMeshes->LoadSphereMesh();
+	m_basicMeshes->LoadTorusMesh();
 }
 
 /***********************************************************
@@ -426,9 +504,395 @@ void SceneManager::RenderScene()
 		ZrotationDegrees,
 		positionXYZ);
 
-	SetShaderColor(1, 1, 1, 1);
+	SetShaderColor(0.25f, 0.25f, 0.25f, 1);
 
 	// draw the mesh with transformation values
 	m_basicMeshes->DrawPlaneMesh();
 	/****************************************************************/
+
+	RenderCatScratcher();
+	RenderChair();
+	RenderBall();
+	RenderKettlebell();
+}
+
+void SceneManager::RenderCatScratcher() {
+	//declare the varaibles for the transformation
+	glm::vec3 scaleXYZ;
+	float XrotationDegrees = 0.0f;
+	float YrotationDegrees = 15.0f;
+	float ZrotationDegrees = 0.0f;
+	glm::vec3 positionXYZ;
+
+	//set the scale for the mesh for the lowest box of cat scratcher
+	scaleXYZ = glm::vec3(3.0f, 0.75f, 3.0f);
+
+	//set the rotation for the mesh for the lowest box of cat scratcher
+	XrotationDegrees = 0.0f;
+	YrotationDegrees = 0.0f;
+	ZrotationDegrees = 0.0f;
+
+	//set the posisiton of the mesh  for the lowest box of cat scratcher
+	positionXYZ = glm::vec3(2.0f, 0.5f, 0.0f);
+
+	SetTransformations(
+		scaleXYZ,
+		XrotationDegrees,
+		YrotationDegrees,
+		ZrotationDegrees,
+		positionXYZ);
+
+	//SetShaderColor(0.90f, 0.80f, 0.5f, 1);
+	SetShaderTexture("carpet1");
+	SetTextureUVScale(1.0, 1.0);
+	SetShaderMaterial("carpet");
+
+
+	m_basicMeshes->DrawBoxMesh();
+
+	//set the scale for the mesh for the second box of the scratcher
+	scaleXYZ = glm::vec3(2.0f, 1.0f, 2.0f);
+
+	//set the rotation for the mesh for the second box of the scratcher
+	XrotationDegrees = 0.0f;
+	YrotationDegrees = 0.0f;
+	ZrotationDegrees = 0.0f;
+
+	//set the posisiton of the mesh for the second box of the scratcher
+	positionXYZ = glm::vec3(2.0f, 1.0f, 0.0f);
+
+	SetTransformations(
+		scaleXYZ,
+		XrotationDegrees,
+		YrotationDegrees,
+		ZrotationDegrees,
+		positionXYZ);
+
+	//SetShaderColor(0.90f, 0.80f, 0.5f, 1);
+	SetShaderTexture("carpet2");
+	SetTextureUVScale(1.0, 1.0);
+	SetShaderMaterial("carpet");
+
+	m_basicMeshes->DrawBoxMesh();
+
+	//set the scale for the mesh for the pyramid in the middle of the scratcher
+	scaleXYZ = glm::vec3(1.8f, 3.0f, 1.8f);
+
+	//set the rotation for the mesh for the pyramid in the middle of the scratcher
+	XrotationDegrees = 0.0f;
+	YrotationDegrees = 0.0f;
+	ZrotationDegrees = 0.0f;
+
+	//set the posisiton of the mesh for the pyramid in the middle of the scratcher
+	positionXYZ = glm::vec3(2.0f, 3.0f, 0.0f);
+
+	SetTransformations(
+		scaleXYZ,
+		XrotationDegrees,
+		YrotationDegrees,
+		ZrotationDegrees,
+		positionXYZ);
+
+	//SetShaderColor(0.40f, 0.30f, 0.05f, 1);
+
+	SetShaderTexture("carpet2");
+	SetTextureUVScale(1.0, 1.0);
+	SetShaderMaterial("carpet");
+
+	m_basicMeshes->DrawPyramid4Mesh();
+
+	//set the scale for the mesh for the second heighest box of the scratcher
+	scaleXYZ = glm::vec3(1.8f, 0.75f, 1.8f);
+
+	//set the rotation for the mesh for the second heighest box of the scratcher
+	XrotationDegrees = 0.0f;
+	YrotationDegrees = 0.0f;
+	ZrotationDegrees = 0.0f;
+
+	//set the posisiton of the mesh for the second heighest box of the scratcher
+	positionXYZ = glm::vec3(2.0f, 4.0f, 0.0f);
+
+	SetTransformations(
+		scaleXYZ,
+		XrotationDegrees,
+		YrotationDegrees,
+		ZrotationDegrees,
+		positionXYZ);
+
+	//SetShaderColor(0.90f, 0.80f, 0.5f, 1);
+
+	SetShaderTexture("carpet1");
+	SetTextureUVScale(1.0, 1.0);
+	SetShaderMaterial("carpet");
+
+	m_basicMeshes->DrawBoxMesh();
+
+	//set the scale for the mesh for the  heighest box of the scratcher
+	scaleXYZ = glm::vec3(2.3f, 0.5f, 2.3f);
+
+	//set the rotation for the mesh for the  heighest box of the scratcher
+	XrotationDegrees = 0.0f;
+	YrotationDegrees = 0.0f;
+	ZrotationDegrees = 0.0f;
+
+	//set the posisiton of the mesh for the  heighest box of the scratcher
+	positionXYZ = glm::vec3(2.0f, 4.5f, 0.0f);
+
+	SetTransformations(
+		scaleXYZ,
+		XrotationDegrees,
+		YrotationDegrees,
+		ZrotationDegrees,
+		positionXYZ);
+
+	//SetShaderColor(0.90f, 0.80f, 0.5f, 1);
+
+	SetShaderTexture("carpet1");
+	SetTextureUVScale(1.0, 1.0);
+	SetShaderMaterial("carpet");
+
+	m_basicMeshes->DrawBoxMesh();
+}
+
+void SceneManager::RenderChair() {
+
+	//declare the varaibles for the transformation
+	glm::vec3 scaleXYZ;
+	float XrotationDegrees = 0.0f;
+	float YrotationDegrees = 0.0f;
+	float ZrotationDegrees = 0.0f;
+	glm::vec3 positionXYZ;
+
+	//set scale for front left chair leg
+	scaleXYZ = glm::vec3(0.25f, 3.0f, 0.25f);
+
+	//set rotation for front left chair leg
+	XrotationDegrees = 0.0f;
+	YrotationDegrees = 0.0f;
+	ZrotationDegrees = 0.0f;
+
+	//set position of front left chair leg
+	positionXYZ = glm::vec3(-6.0f, 0.0f, 0.0f);
+
+	//set transformations
+	SetTransformations(
+		scaleXYZ,
+		XrotationDegrees,
+		YrotationDegrees,
+		ZrotationDegrees,
+		positionXYZ);
+
+	SetShaderColor(0.45f, 0.25f, 0.35f, 1);
+
+	m_basicMeshes->DrawCylinderMesh();
+
+	//set scale for front right chair leg
+	scaleXYZ = glm::vec3(0.25f, 3.0f, 0.25f);
+
+	//set rotation for front right chair leg
+	XrotationDegrees = 0.0f;
+	YrotationDegrees = 0.0f;
+	ZrotationDegrees = 0.0f;
+
+	//set position of front right chair leg
+	positionXYZ = glm::vec3(-3.0f, 0.0f, 0.0f);
+
+	//set transformations
+	SetTransformations(
+		scaleXYZ,
+		XrotationDegrees,
+		YrotationDegrees,
+		ZrotationDegrees,
+		positionXYZ);
+
+	SetShaderColor(0.45f, 0.25f, 0.35f, 1);
+
+	m_basicMeshes->DrawCylinderMesh();
+
+	//set scale for back left chair leg
+	scaleXYZ = glm::vec3(0.25f, 3.0f, 0.25f);
+
+	//set rotation for back left chair leg
+	XrotationDegrees = 0.0f;
+	YrotationDegrees = 0.0f;
+	ZrotationDegrees = 0.0f;
+
+	//set position of back left chair leg
+	positionXYZ = glm::vec3(-6.0f, 0.0f, -3.0f);
+
+	//set transformations
+	SetTransformations(
+		scaleXYZ,
+		XrotationDegrees,
+		YrotationDegrees,
+		ZrotationDegrees,
+		positionXYZ);
+
+	SetShaderColor(0.45f, 0.25f, 0.35f, 1);
+
+	m_basicMeshes->DrawCylinderMesh();
+
+	//set scale for back right chair leg
+	scaleXYZ = glm::vec3(0.25f, 3.0f, 0.25f);
+
+	//set rotation for back right chair leg
+	XrotationDegrees = 0.0f;
+	YrotationDegrees = 0.0f;
+	ZrotationDegrees = 0.0f;
+
+	//set position of back right chair leg
+	positionXYZ = glm::vec3(-3.0f, 0.0f, -3.0f);
+
+	//set transformations
+	SetTransformations(
+		scaleXYZ,
+		XrotationDegrees,
+		YrotationDegrees,
+		ZrotationDegrees,
+		positionXYZ);
+
+	SetShaderColor(0.45f, 0.25f, 0.35f, 1);
+
+	m_basicMeshes->DrawCylinderMesh();
+
+	//set scale for chair seat
+	scaleXYZ = glm::vec3(3.3, 0.25, 3.3);
+
+	//set rotation for chair seat
+	XrotationDegrees = 0.0f;
+	YrotationDegrees = 0.0f;
+	ZrotationDegrees = 0.0f;
+
+	//set position for chair seat
+	positionXYZ = glm::vec3(-4.5f, 3.0f, -1.5f);
+
+	//set Tranformations
+	SetTransformations(
+		scaleXYZ,
+		XrotationDegrees,
+		YrotationDegrees,
+		ZrotationDegrees,
+		positionXYZ
+	);
+
+	SetShaderColor(0.45f, 0.25f, 0.35f, 1);
+
+	m_basicMeshes->DrawBoxMesh();
+
+	//set scale for chair back
+	scaleXYZ = glm::vec3(3.3, 0.25, 3.3);
+
+	//set rotation for chair back
+	XrotationDegrees = 90.0f;
+	YrotationDegrees = 0.0f;
+	ZrotationDegrees = 0.0f;
+
+	//set position for chair back
+	positionXYZ = glm::vec3(-4.5f, 4.5f, -3.0f);
+
+	//set Tranformations
+	SetTransformations(
+		scaleXYZ,
+		XrotationDegrees,
+		YrotationDegrees,
+		ZrotationDegrees,
+		positionXYZ
+	);
+
+	SetShaderColor(0.45f, 0.25f, 0.35f, 1);
+
+	m_basicMeshes->DrawBoxMesh();
+}
+
+void SceneManager::RenderBall() {
+	//declare the varaibles for the transformation
+	glm::vec3 scaleXYZ;
+	float XrotationDegrees = 0.0f;
+	float YrotationDegrees = 0.0f;
+	float ZrotationDegrees = 0.0f;
+	glm::vec3 positionXYZ;
+
+	//set scale for ball
+	scaleXYZ = glm::vec3(1.0f, 1.0f, 1.0f);
+
+	//set rotation for ball
+	XrotationDegrees = 0.0f;
+	YrotationDegrees = 0.0f;
+	ZrotationDegrees = 0.0f;
+
+	//set position of ball
+	positionXYZ = glm::vec3(-4.5f, 4.0f, -0.5f);
+
+	//set transformations
+	SetTransformations(
+		scaleXYZ,
+		XrotationDegrees,
+		YrotationDegrees,
+		ZrotationDegrees,
+		positionXYZ);
+
+	//SetShaderColor(0.25f, 0.25f, 0.55f, 1);
+	SetShaderTexture("abstract");
+	SetTextureUVScale(1.0, 1.0);
+	SetShaderMaterial("abstract");
+
+
+	m_basicMeshes->DrawSphereMesh();
+}
+
+void SceneManager::RenderKettlebell() {
+
+	//declare the varaibles for the transformation
+	glm::vec3 scaleXYZ;
+	float XrotationDegrees = 0.0f;
+	float YrotationDegrees = 0.0f;
+	float ZrotationDegrees = 0.0f;
+	glm::vec3 positionXYZ;
+
+	//set scale for ball
+	scaleXYZ = glm::vec3(1.0f, 1.0f, 1.0f);
+
+	//set rotation for ball
+	XrotationDegrees = 0.0f;
+	YrotationDegrees = 0.0f;
+	ZrotationDegrees = 0.0f;
+
+	//set position of ball
+	positionXYZ = glm::vec3(2.0f, 5.5f, -0.5f);
+
+	//set transformations
+	SetTransformations(
+		scaleXYZ,
+		XrotationDegrees,
+		YrotationDegrees,
+		ZrotationDegrees,
+		positionXYZ);
+
+	SetShaderColor(0.55f, 0.25f, 0.55f, 1);
+
+	m_basicMeshes->DrawSphereMesh();
+
+	//set scale for handle
+	scaleXYZ = glm::vec3(0.75f, 1.0f, 0.75f);
+
+	//set rotation for handle
+	XrotationDegrees = 0.0f;
+	YrotationDegrees = 0.0f;
+	ZrotationDegrees = 0.0f;
+
+	//set position of handle
+	positionXYZ = glm::vec3(2.0f, 6.25f, -0.5f);
+
+	//set transformations
+	SetTransformations(
+		scaleXYZ,
+		XrotationDegrees,
+		YrotationDegrees,
+		ZrotationDegrees,
+		positionXYZ);
+
+	SetShaderColor(0.55f, 0.25f, 0.55f, 1);
+
+	m_basicMeshes->DrawTorusMesh();
+
 }
